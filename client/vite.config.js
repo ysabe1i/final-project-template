@@ -14,6 +14,7 @@ export default defineConfig({
     // is why the deployed site needs CORS and this does not. See page 8.
     proxy: {
       '/api': 'http://localhost:3000',
+      '/uploads': 'http://localhost:3000',
     },
   },
 })

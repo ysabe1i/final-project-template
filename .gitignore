@@ -2,6 +2,20 @@
 .env
 .env.*
 !.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Firebase Admin service-account key (full server access to the project),
+# plus common private-key file types.
+firebase-service-account*.json
+*-firebase-adminsdk-*.json
+serviceAccount*.json
+*.pem
+*.key
+
+# User-uploaded logos/fonts saved by the server
+server/uploads/
 
 # Dependencies and build output
 node_modules/

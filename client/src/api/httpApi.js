@@ -1,24 +1,21 @@
-// The real client. Every function here talks to YOUR Express API.
-//
-// This is the file that matters for your finals project. mockApi.js exists so
-// you can build the interface before this has anywhere to point.
+import { auth } from '../firebase.js'
 
 const BASE = import.meta.env.VITE_API_BASE_URL || ''
 
 async function request(path, options) {
-  const response = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  })
+  const token = auth.currentUser ? await auth.currentUser.getIdToken() : null
+  const headers = options?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+
+  const response = await fetch(`${BASE}${path}`, { headers, ...options })
 
   if (!response.ok) {
-    // Try to use the API's own message; fall back to the status line.
     let message = `${response.status} ${response.statusText}`
     try {
       const body = await response.json()
       if (body?.error) message = body.error
     } catch {
-      // The body was not JSON. The status line is all we have.
+      // body wasn't JSON
     }
     throw new Error(message)
   }
@@ -26,15 +23,24 @@ async function request(path, options) {
   return response.status === 204 ? null : response.json()
 }
 
-export const listSightings = () => request('/api/sightings')
+export const listKits = () => request('/api/kits')
+export const getKit = (id) => request(`/api/kits/${id}`)
+export const createKit = (input) => request('/api/kits', { method: 'POST', body: JSON.stringify(input) })
+export const updateKit = (id, input) => request(`/api/kits/${id}`, { method: 'PUT', body: JSON.stringify(input) })
+export const deleteKit = (id) => request(`/api/kits/${id}`, { method: 'DELETE' })
 
-export const getSighting = (id) => request(`/api/sightings/${id}`)
+export const listProjects = () => request('/api/projects')
+export const getProject = (id) => request(`/api/projects/${id}`)
+export const createProject = (input) => request('/api/projects', { method: 'POST', body: JSON.stringify(input) })
+export const updateProject = (id, input) => request(`/api/projects/${id}`, { method: 'PUT', body: JSON.stringify(input) })
+export const deleteProject = (id) => request(`/api/projects/${id}`, { method: 'DELETE' })
 
-export const createSighting = (input) =>
-  request('/api/sightings', { method: 'POST', body: JSON.stringify(input) })
+export const listNotes = () => request('/api/notes')
+export const createNote = (text) => request('/api/notes', { method: 'POST', body: JSON.stringify({ text }) })
+export const deleteNote = (id) => request(`/api/notes/${id}`, { method: 'DELETE' })
 
-export const updateSighting = (id, input) =>
-  request(`/api/sightings/${id}`, { method: 'PUT', body: JSON.stringify(input) })
-
-export const deleteSighting = (id) =>
-  request(`/api/sightings/${id}`, { method: 'DELETE' })
+export async function uploadFile(file) {
+  const form = new FormData()
+  form.append('file', file)
+  return request('/api/uploads', { method: 'POST', body: form })
+}

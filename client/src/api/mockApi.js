@@ -10,11 +10,8 @@
 
 import seed from './seed.json'
 
-const KEY = 'final-project:sightings'
+const KEY = 'nara:data'
 
-// A real network is not instant. Keeping this delay is what forces you to build
-// a loading state now, while it is cheap, instead of discovering you need one
-// the day you switch to the real API.
 const delay = (ms = 250) => new Promise((resolve) => setTimeout(resolve, ms))
 
 function read() {
@@ -23,53 +20,147 @@ function read() {
     try {
       return JSON.parse(stored)
     } catch {
-      // Corrupted storage. Start again rather than crashing the app.
       localStorage.removeItem(KEY)
     }
   }
   localStorage.setItem(KEY, JSON.stringify(seed))
-  return seed
+  return structuredClone(seed)
 }
 
-function write(rows) {
-  localStorage.setItem(KEY, JSON.stringify(rows))
-  return rows
+function write(data) {
+  localStorage.setItem(KEY, JSON.stringify(data))
+  return data
 }
 
-export async function listSightings() {
+function newId(prefix) {
+  return `${prefix}-${crypto.randomUUID()}`
+}
+
+// ---------- kits ----------
+
+export async function listKits() {
   await delay()
-  return read().slice().sort((a, b) => b.reported_at.localeCompare(a.reported_at))
+  return read().kits.slice().sort((a, b) => b.created_at.localeCompare(a.created_at))
 }
 
-export async function getSighting(id) {
+export async function getKit(id) {
   await delay()
-  const found = read().find((row) => String(row.id) === String(id))
+  const found = read().kits.find((k) => String(k.id) === String(id))
   if (!found) throw new Error('Not found')
   return found
 }
 
-export async function createSighting(input) {
+export async function createKit(input) {
   await delay()
+  const data = read()
   const created = {
-    ...input,
-    id: crypto.randomUUID(),
-    reported_at: new Date().toISOString(),
+    id: newId('kit'),
+    name: input.name ?? '',
+    tag: input.tag ?? '',
+    colors: input.colors ?? [],
+    logos: input.logos ?? [],
+    fonts: input.fonts ?? [],
+    created_at: new Date().toISOString(),
   }
-  write([...read(), created])
+  data.kits.push(created)
+  write(data)
   return created
 }
 
-export async function updateSighting(id, input) {
+export async function updateKit(id, input) {
   await delay()
-  const rows = read()
-  const index = rows.findIndex((row) => String(row.id) === String(id))
+  const data = read()
+  const index = data.kits.findIndex((k) => String(k.id) === String(id))
   if (index === -1) throw new Error('Not found')
-  rows[index] = { ...rows[index], ...input }
-  write(rows)
-  return rows[index]
+  data.kits[index] = { ...data.kits[index], ...input }
+  write(data)
+  return data.kits[index]
 }
 
-export async function deleteSighting(id) {
+export async function deleteKit(id) {
   await delay()
-  write(read().filter((row) => String(row.id) !== String(id)))
+  const data = read()
+  data.kits = data.kits.filter((k) => String(k.id) !== String(id))
+  write(data)
+}
+
+// ---------- projects ----------
+
+export async function listProjects() {
+  await delay()
+  return read().projects.slice().sort((a, b) => b.created_at.localeCompare(a.created_at))
+}
+
+export async function getProject(id) {
+  await delay()
+  const found = read().projects.find((p) => String(p.id) === String(id))
+  if (!found) throw new Error('Not found')
+  return found
+}
+
+export async function createProject(input) {
+  await delay()
+  const data = read()
+  const created = {
+    id: newId('project'),
+    title: input.title ?? '',
+    image_url: input.image_url ?? null,
+    kit_id: input.kit_id ?? null,
+    notes_worked: input.notes_worked ?? '',
+    notes_to_change: input.notes_to_change ?? '',
+    created_at: new Date().toISOString(),
+  }
+  data.projects.push(created)
+  write(data)
+  return created
+}
+
+export async function updateProject(id, input) {
+  await delay()
+  const data = read()
+  const index = data.projects.findIndex((p) => String(p.id) === String(id))
+  if (index === -1) throw new Error('Not found')
+  data.projects[index] = { ...data.projects[index], ...input }
+  write(data)
+  return data.projects[index]
+}
+
+export async function deleteProject(id) {
+  await delay()
+  const data = read()
+  data.projects = data.projects.filter((p) => String(p.id) !== String(id))
+  write(data)
+}
+
+// ---------- quick notes ----------
+
+export async function listNotes() {
+  await delay()
+  return read().notes.slice().sort((a, b) => b.created_at.localeCompare(a.created_at))
+}
+
+export async function createNote(text) {
+  await delay()
+  const data = read()
+  const created = { id: newId('note'), text, created_at: new Date().toISOString() }
+  data.notes.push(created)
+  write(data)
+  return created
+}
+
+export async function deleteNote(id) {
+  await delay()
+  const data = read()
+  data.notes = data.notes.filter((n) => String(n.id) !== String(id))
+  write(data)
+}
+
+// ---------- uploads ----------
+// In demo mode there is nowhere to actually store a file, so this just hands
+// back a browser-local object URL. It behaves like a real upload (an async
+// call that returns a URL) but the file never leaves this tab and is gone on
+// reload, same as everything else in demo mode.
+export async function uploadFile(file) {
+  await delay(100)
+  return { url: URL.createObjectURL(file) }
 }

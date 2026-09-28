@@ -1,20 +1,57 @@
--- The complete shape of the database. Safe to run against an empty database,
--- and safe to run twice.
---
--- This file is committed on purpose. Your schema is a fact about your
--- application, not a runtime concern: it should be readable by opening a file
--- rather than by connecting to a server. It is also what lets you move to a
--- hosted database in one command.
-
-CREATE TABLE IF NOT EXISTS sightings (
-  id          SERIAL PRIMARY KEY,
-  place       TEXT        NOT NULL,
-  description TEXT        NOT NULL DEFAULT '',
-  spookiness  INTEGER     NOT NULL CHECK (spookiness BETWEEN 1 AND 5),
-  reported_at TIMESTAMPTZ NOT NULL DEFAULT now()
+CREATE TABLE IF NOT EXISTS kits (
+  id         SERIAL PRIMARY KEY,
+  user_id    TEXT        NOT NULL,
+  name       TEXT        NOT NULL,
+  tag        TEXT        NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- The list page always sorts newest first. Without this the database reads
--- every row and sorts it on each request.
-CREATE INDEX IF NOT EXISTS sightings_reported_at_idx
-  ON sightings (reported_at DESC);
+CREATE TABLE IF NOT EXISTS kit_colors (
+  id       SERIAL PRIMARY KEY,
+  kit_id   INTEGER NOT NULL REFERENCES kits(id) ON DELETE CASCADE,
+  hex      TEXT    NOT NULL,
+  name     TEXT    NOT NULL DEFAULT '',
+  position INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS kit_logos (
+  id        SERIAL PRIMARY KEY,
+  kit_id    INTEGER NOT NULL REFERENCES kits(id) ON DELETE CASCADE,
+  file_path TEXT    NOT NULL,
+  label     TEXT    NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS kit_fonts (
+  id                SERIAL PRIMARY KEY,
+  kit_id            INTEGER NOT NULL REFERENCES kits(id) ON DELETE CASCADE,
+  file_path         TEXT    NOT NULL,
+  font_family_name  TEXT    NOT NULL,
+  label             TEXT    NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS projects (
+  id              SERIAL PRIMARY KEY,
+  user_id         TEXT        NOT NULL,
+  title           TEXT        NOT NULL,
+  image_url       TEXT,
+  kit_id          INTEGER     REFERENCES kits(id) ON DELETE SET NULL,
+  notes_worked    TEXT        NOT NULL DEFAULT '',
+  notes_to_change TEXT        NOT NULL DEFAULT '',
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS quick_notes (
+  id         SERIAL PRIMARY KEY,
+  user_id    TEXT        NOT NULL,
+  text       TEXT        NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS kits_user_id_idx ON kits (user_id);
+CREATE INDEX IF NOT EXISTS projects_user_id_idx ON projects (user_id);
+CREATE INDEX IF NOT EXISTS quick_notes_user_id_idx ON quick_notes (user_id);
+CREATE INDEX IF NOT EXISTS projects_created_at_idx ON projects (created_at DESC);
+CREATE INDEX IF NOT EXISTS quick_notes_created_at_idx ON quick_notes (created_at DESC);
+CREATE INDEX IF NOT EXISTS kit_colors_kit_id_idx ON kit_colors (kit_id);
+CREATE INDEX IF NOT EXISTS kit_logos_kit_id_idx ON kit_logos (kit_id);
+CREATE INDEX IF NOT EXISTS kit_fonts_kit_id_idx ON kit_fonts (kit_id);
